@@ -1,0 +1,9 @@
+**
+!dist/extension.js
+!dist/webview/**
+!media/icon.png
+!media/codeweave.svg
+!package.json
+!README.md
+!changelog.md
+!LICENSE

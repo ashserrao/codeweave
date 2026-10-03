@@ -1,0 +1,180 @@
+{
+  "name": "codeweave",
+  "displayName": "CodeWeave",
+  "description": "Your code. Connected intelligence. An MCP-powered AI coding agent with multi-provider key rotation, persistent code memory, and human-approved changes.",
+  "version": "0.1.1",
+  "publisher": "codeweave",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0b0b1a",
+    "theme": "dark"
+  },
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "mcp",
+    "llm",
+    "code memory"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeweave",
+          "title": "CodeWeave",
+          "icon": "media/codeweave.svg"
+        }
+      ]
+    },
+    "views": {
+      "codeweave": [
+        {
+          "type": "webview",
+          "id": "codeweave.chat",
+          "name": "Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "codeweave.newChat",
+        "title": "New Chat",
+        "category": "CodeWeave",
+        "icon": "$(add)"
+      },
+      {
+        "command": "codeweave.openAdmin",
+        "title": "Open Settings & Providers",
+        "category": "CodeWeave",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "codeweave.openUsage",
+        "title": "Open Usage Dashboard",
+        "category": "CodeWeave",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "codeweave.cancelRequest",
+        "title": "Cancel Current Request",
+        "category": "CodeWeave"
+      },
+      {
+        "command": "codeweave.askAboutSelection",
+        "title": "Ask CodeWeave About Selection",
+        "category": "CodeWeave"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "codeweave.newChat",
+          "when": "view == codeweave.chat",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codeweave.openAdmin",
+          "when": "view == codeweave.chat",
+          "group": "navigation@2"
+        },
+        {
+          "command": "codeweave.openUsage",
+          "when": "view == codeweave.chat",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "codeweave.askAboutSelection",
+          "when": "editorHasSelection",
+          "group": "codeweave@1"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "codeweave.askAboutSelection",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l",
+        "when": "editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "CodeWeave",
+      "properties": {
+        "codeweave.chat.includeActiveEditor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Attach the active editor's selection (or a bounded excerpt of the file) to chat messages."
+        },
+        "codeweave.chat.maxEditorContextChars": {
+          "type": "number",
+          "default": 24000,
+          "minimum": 1000,
+          "description": "Maximum characters of active-editor content attached to a message."
+        },
+        "codeweave.request.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 10,
+          "description": "Abort a provider request when no data has been received for this many seconds."
+        },
+        "codeweave.chat.systemPrompt": {
+          "type": "string",
+          "default": "",
+          "editPresentation": "multilineText",
+          "description": "Extra instructions appended to CodeWeave's system prompt."
+        },
+        "codeweave.context.summarize": {
+          "type": "boolean",
+          "default": true,
+          "description": "When a conversation no longer fits the model, condense older turns with the local context model instead of dropping them. Conversation text is only sent to providers with the \"context\" role for this."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "npm run build:webview && npm run build:ext",
+    "build:ext": "node esbuild.mjs",
+    "build:webview": "vite build --config webview-ui/vite.config.ts",
+    "watch:ext": "node esbuild.mjs --watch",
+    "watch:webview": "vite build --config webview-ui/vite.config.ts --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p webview-ui/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "package": "npm run typecheck && vsce package --no-dependencies --allow-missing-repository",
+    "vscode:prepublish": "npm run build:webview && node esbuild.mjs --production"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/vscode": "^1.95.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "dompurify": "^3.1.6",
+    "marked": "^14.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
