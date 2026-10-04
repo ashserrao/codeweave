@@ -191,3 +191,50 @@ input[type='checkbox'] { padding: 0; }
 .form-grid label:not(.check) { display: flex; flex-direction: column; gap: 4px; }
 .form-grid .wide { grid-column: 1 / -1; }
 .form-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* ---------- Phase 2: budgets in Settings ---------- */
+.admin-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.budget-form { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.budget-form input { width: 120px; }
+
+/* ---------- Phase 2: usage dashboard ---------- */
+.usage { max-width: 1200px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.tile.hero { grid-column: span 2; }
+@media (max-width: 520px) { .tile.hero { grid-column: auto; } }
+.tile-label { color: var(--vscode-descriptionForeground); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tile-value { font-size: 1.6em; font-weight: 600; }
+.tile.hero .tile-value { font-size: 3em; line-height: 1.1; }
+
+.src {
+  font-size: 0.72em; padding: 0 5px; border-radius: 8px; border: 1px solid var(--border);
+  text-transform: uppercase; letter-spacing: 0.03em; font-weight: 500; cursor: help; white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+}
+.src-reported { border-color: var(--vscode-charts-blue); }
+.src-budget { border-style: dashed; }
+.src-unknown { opacity: 0.7; }
+
+.legend { display: flex; flex-direction: column; gap: 2px; }
+
+.table-scroll { overflow-x: auto; }
+.usage-grid td { vertical-align: top; }
+.usage-grid th { white-space: nowrap; }
+.usage-grid td:nth-child(3), .usage-grid td:nth-child(4) { font-variant-numeric: tabular-nums; }
+
+.status { white-space: nowrap; }
+.status-good { color: var(--vscode-testing-iconPassed, #3fb950); }
+.status-warning { color: var(--vscode-editorWarning-foreground); }
+.status-serious, .status-critical { color: var(--vscode-errorForeground); }
+.error-text { color: var(--vscode-errorForeground); cursor: help; }
+
+/* Meter: fill carries severity; the track is a lighter step of the same hue. */
+.meter { height: 6px; border-radius: 3px; overflow: hidden; min-width: 120px; margin: 2px 0 4px; }
+.meter-fill { height: 100%; border-radius: 3px; }
+.meter-ok { background: color-mix(in srgb, var(--vscode-charts-blue) 22%, transparent); }
+.meter-ok .meter-fill { background: var(--vscode-charts-blue); }
+.meter-warn { background: color-mix(in srgb, var(--vscode-charts-yellow) 22%, transparent); }
+.meter-warn .meter-fill { background: var(--vscode-charts-yellow); }
+.meter-danger { background: color-mix(in srgb, var(--vscode-charts-red) 22%, transparent); }
+.meter-danger .meter-fill { background: var(--vscode-charts-red); }
