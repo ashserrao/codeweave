@@ -22,7 +22,7 @@ beforeAll(async () => {
       lastBody = JSON.parse(raw);
       const auth = req.headers.authorization;
       if (auth === 'Bearer limited') {
-        res.writeHead(429, { 'retry-after': '3', 'content-type': 'application/json' });
+        res.writeHead(429, { 'retry-after': '3', 'content-type': 'application/json', 'x-ratelimit-remaining-requests': '0', 'x-ratelimit-reset-requests': '3s' });
         res.end('{"error":{"message":"Rate limit"}}');
         return;
       }
@@ -31,7 +31,7 @@ beforeAll(async () => {
         res.end('{"error":{"message":"Unrecognized field stream_options"}}');
         return;
       }
-      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'x-ratelimit-limit-tokens': '1000', 'x-ratelimit-remaining-tokens': '987' });
       const chunk = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
       chunk({ choices: [{ delta: { content: 'Hel' } }] });
       chunk({ choices: [{ delta: { content: 'lo' }, finish_reason: 'stop' }] });
@@ -67,10 +67,13 @@ describe('OpenAICompatAdapter', () => {
     expect(r.finishReason).toBe('stop');
     expect(r.usage).toEqual({ promptTokens: 11, completionTokens: 2, source: 'reported' });
     expect(lastBody.model).toBe('m1');
+    expect(r.rateLimits).toMatchObject({ limitTokens: 1000, remainingTokens: 987 });
   });
 
   it('classifies 429 with retry-after', async () => {
-    await expect(run('limited')).rejects.toMatchObject({ kind: 'rate_limit', retryAfterMs: 3000 });
+    const err = await run('limited').catch((e) => e);
+    expect(err).toMatchObject({ kind: 'rate_limit', retryAfterMs: 3000 });
+    expect(err.rateLimits.remainingRequests).toBe(0);
   });
 
   it('retries without stream_options and labels usage as estimated', async () => {
