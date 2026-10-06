@@ -7,6 +7,8 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   root: resolve(__dirname),
+  // Relative asset URLs: webviews serve files from a vscode-resource origin, not "/".
+  base: './',
   build: {
     outDir: resolve(__dirname, '../dist/webview'),
     emptyOutDir: true,
