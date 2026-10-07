@@ -23,6 +23,8 @@ export interface CompletionResult {
   /** Set when the adapter learned the endpoint rejects stream_options. */
   streamUsageUnsupported?: boolean;
   rateLimits?: RateLimitSnapshot;
+  /** Upstream provider a gateway (e.g. OmniRoute) routed this request to, from its response headers. */
+  servedBy?: string;
 }
 
 /**

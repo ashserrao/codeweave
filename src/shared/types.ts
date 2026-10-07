@@ -87,6 +87,8 @@ export interface ChatMessage {
     providerId?: string;
     providerName?: string;
     model?: string;
+    /** Upstream provider chosen by a gateway such as OmniRoute, when it says so. */
+    servedBy?: string;
     keyId?: string;
     usage?: TokenUsage;
     error?: string;

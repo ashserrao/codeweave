@@ -250,6 +250,7 @@ function MessageView({ message: m, streaming }: { message: ChatMessage; streamin
       {!streaming && m.meta?.model && (
         <div className="meta">
           {m.meta.providerName} · {m.meta.model}
+          {m.meta.servedBy && <span title="Upstream provider chosen by the gateway"> · via {m.meta.servedBy}</span>}
           {usage && (
             <span title={usage.source === 'reported' ? 'Token counts reported by the provider' : 'Provider did not report usage; estimated locally (~4 chars/token)'}>
               {' '}

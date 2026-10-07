@@ -277,6 +277,7 @@ export class ChatService implements vscode.Disposable {
             providerId: result.candidate.provider.id,
             providerName: result.candidate.provider.name,
             model: result.candidate.model.model,
+            servedBy: result.servedBy,
             keyId: result.candidate.key?.id,
             usage: result.usage,
           };

@@ -2,6 +2,7 @@ import type { ProviderConfig, TokenUsage } from '../shared/types';
 import { ProviderError, classifyHttpError } from './errors';
 import { SseParser } from './sse';
 import { parseRateLimitHeaders } from './rateLimits';
+import { parseGatewayDecision } from './gateway';
 import type { CompletionRequest, CompletionResult, ProviderAdapter } from './types';
 import { estimateTokens } from '../core/tokens';
 
@@ -94,6 +95,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
     let finishReason: string | undefined;
     let reported: TokenUsage | undefined;
     let rateLimits: CompletionResult['rateLimits'];
+    let servedBy: string | undefined;
 
     try {
       const res = await fetch(endpoint(req.provider.baseUrl, 'chat/completions'), {
@@ -103,6 +105,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
         signal: idle.signal,
       });
       rateLimits = parseRateLimitHeaders(res.headers);
+      servedBy = parseGatewayDecision(res.headers);
       if (!res.ok) {
         const err = classifyHttpError(res.status, await res.text().catch(() => ''), res.headers);
         err.rateLimits = rateLimits;
@@ -166,7 +169,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
       completionTokens: estimateTokens(text),
       source: 'estimated',
     };
-    return { text, finishReason, usage, rateLimits };
+    return { text, finishReason, usage, rateLimits, servedBy };
   }
 
   async listModels(provider: ProviderConfig, apiKey: string | undefined, signal: AbortSignal): Promise<string[]> {
@@ -182,10 +185,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
     if (!res.ok) throw classifyHttpError(res.status, await res.text().catch(() => ''), res.headers);
     const json: any = await res.json();
     const list: unknown[] = Array.isArray(json) ? json : json.data ?? json.models ?? [];
-    return list
-      .map((m) => (typeof m === 'string' ? m : (m as { id?: string; name?: string }).id ?? (m as { name?: string }).name))
-      .filter((id): id is string => typeof id === 'string')
-      .sort();
+    return dedupeModelIds(list);
   }
 }
 
@@ -199,4 +199,22 @@ function parseUsage(usage: any): TokenUsage | undefined {
     completionTokens: Number.isFinite(completion) ? completion : 0,
     source: 'reported',
   };
+}
+
+/**
+ * Extracts model IDs from a /models response. Gateways such as OmniRoute list each model under
+ * two names (alias "cc/x" and canonical "claude/x") and mark the mirror with `parent`; mirrors
+ * whose parent is also listed are dropped so pickers show each model once.
+ */
+export function dedupeModelIds(list: unknown[]): string[] {
+  const entries = list
+    .map((m) => {
+      if (typeof m === 'string') return { id: m, parent: undefined as string | undefined };
+      const o = m as { id?: unknown; name?: unknown; parent?: unknown };
+      const id = typeof o.id === 'string' ? o.id : typeof o.name === 'string' ? o.name : undefined;
+      return { id, parent: typeof o.parent === 'string' ? o.parent : undefined };
+    })
+    .filter((e): e is { id: string; parent: string | undefined } => typeof e.id === 'string');
+  const ids = new Set(entries.map((e) => e.id));
+  return [...new Set(entries.filter((e) => !(e.parent && e.parent !== e.id && ids.has(e.parent))).map((e) => e.id))].sort();
 }
