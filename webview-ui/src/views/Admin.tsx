@@ -192,6 +192,22 @@ function ProviderCard({
       </div>
 
       {test && <div className={`banner ${test.ok ? 'ok' : 'error'}`}>{test.message}</div>}
+      {test?.ok && !!test.models?.length && (
+        <ModelPicker
+          available={test.models.filter((id) => !p.models.some((m) => m.model === id))}
+          onAdd={(model) =>
+            run(() =>
+              request('admin/saveProvider', {
+                ...p,
+                models: [
+                  ...p.models,
+                  { id: uid(), model, contextWindow: p.role === 'context' ? 8192 : 128000, maxOutputTokens: p.role === 'context' ? 1024 : 8192, enabled: true },
+                ],
+              }),
+            )
+          }
+        />
+      )}
 
       <div className="subhead">Models (tried in this order)</div>
       {p.models.length === 0 ? (
@@ -446,6 +462,37 @@ function BudgetEditor({ providerId, k, run }: { providerId: string; k: KeyMeta; 
         </button>
       )}
       <button className="btn" type="button" onClick={() => setOpen(false)}>Cancel</button>
+    </form>
+  );
+}
+
+/** Search the models an endpoint reported and add one without typing its exact ID. */
+function ModelPicker({ available, onAdd }: { available: string[]; onAdd: (model: string) => Promise<void> }) {
+  const [value, setValue] = useState('');
+  const listId = useState(() => `models-${uid()}`)[0];
+  const valid = available.includes(value);
+  return (
+    <form
+      className="key-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) void onAdd(value).then(() => setValue(''));
+      }}
+    >
+      <input
+        list={listId}
+        value={value}
+        placeholder={`Search ${available.length} available model(s) to add…`}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      <datalist id={listId}>
+        {available.map((id) => (
+          <option key={id} value={id} />
+        ))}
+      </datalist>
+      <button className="btn" type="submit" disabled={!valid} title="Adds it with default limits; check them with Edit">
+        Add model
+      </button>
     </form>
   );
 }
