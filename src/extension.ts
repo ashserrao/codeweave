@@ -14,6 +14,9 @@ import { UsageStatusBar } from './usage/UsageStatusBar';
 import { ChatViewProvider } from './webview/ChatViewProvider';
 import { AdminPanel } from './webview/AdminPanel';
 import { UsagePanel } from './webview/UsagePanel';
+import { Applier } from './approval/Applier';
+import { ApprovalService, PROPOSAL_SCHEME } from './approval/ApprovalService';
+import { ProposalStore } from './approval/ProposalStore';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = new Logger();
@@ -25,9 +28,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const adapter = new OpenAICompatAdapter();
   const router = new Router(registry, adapter, ledger, log);
   const contextService = new ContextService(router);
-  const store = new ConversationStore(context.storageUri ?? context.globalStorageUri);
+  const storageRoot = context.storageUri ?? context.globalStorageUri;
+  const store = new ConversationStore(storageRoot);
   const editor = new EditorContext();
-  const chat = new ChatService(store, registry, router, contextService, editor, context.workspaceState, log);
+  const applier = new Applier();
+  const approvals = new ApprovalService(new ProposalStore(storageRoot), applier, log);
+  const chat = new ChatService(store, registry, router, contextService, approvals, editor, context.workspaceState, log);
   await chat.restore();
 
   const chatView = new ChatViewProvider(context.extensionUri, chat, log);
@@ -39,6 +45,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     editor,
     chat,
     chatView,
+    applier,
+    vscode.workspace.registerTextDocumentContentProvider(PROPOSAL_SCHEME, approvals),
     new UsageStatusBar(usage),
     vscode.window.registerWebviewViewProvider(ChatViewProvider.viewId, chatView, {
       webviewOptions: { retainContextWhenHidden: true },

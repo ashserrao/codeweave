@@ -42,6 +42,13 @@ export interface Methods {
   'chat/openAdmin': { params: void; result: void };
   'chat/copy': { params: { text: string }; result: void };
   'chat/openUsage': { params: void; result: void };
+  /** A click on a change card. Only accept/undo/stop can lead to a write or command, and only for these ids. */
+  'changes/act': {
+    params: { messageId: string; itemIds: string[]; action: 'accept' | 'reject' | 'undo' | 'stop' | 'diff' | 'open' };
+    result: void;
+  };
+  /** "Apply to editor" on a plain code block: creates a pending change for the active file. */
+  'changes/applyBlock': { params: { messageId: string; code: string }; result: void };
 
   'admin/getState': { params: void; result: AdminState };
   'admin/saveProvider': { params: ProviderConfig; result: void };

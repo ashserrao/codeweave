@@ -3,6 +3,7 @@ import type { ChatState } from '../../../src/shared/protocol';
 import type { ChatMessage, ModelTarget } from '../../../src/shared/types';
 import { on, request, vscode } from '../rpc';
 import { Markdown } from '../components/Markdown';
+import { ChangesCard } from '../components/ChangesCard';
 
 interface Persisted {
   draft?: string;
@@ -84,6 +85,12 @@ export function Chat() {
       setDraft(text);
       setError((e as Error).message);
     }
+  };
+
+  /** Puts a question in the input (e.g. about a command's output) for the user to edit and send. */
+  const askAbout = (text: string) => {
+    setDraft(text);
+    inputRef.current?.focus();
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -179,7 +186,7 @@ export function Chat() {
         )}
         {messages.map((m, i) => (
           <div key={m.id} className="msg-wrap">
-            <MessageView message={m} streaming={state.busy && i === messages.length - 1} />
+            <MessageView message={m} streaming={state.busy && i === messages.length - 1} onAsk={askAbout} />
             {state.conversation.summary?.coversThroughId === m.id && (
               <div className="divider" title={state.conversation.summary.text}>
                 ↑ {state.conversation.summary.messageCount} earlier message(s) are sent to the model as a summary by{' '}
@@ -222,7 +229,7 @@ export function Chat() {
   );
 }
 
-function MessageView({ message: m, streaming }: { message: ChatMessage; streaming: boolean }) {
+function MessageView({ message: m, streaming, onAsk }: { message: ChatMessage; streaming: boolean; onAsk: (text: string) => void }) {
   if (m.role === 'user') {
     return (
       <div className="msg user">
@@ -240,7 +247,12 @@ function MessageView({ message: m, streaming }: { message: ChatMessage; streamin
   const usage = m.meta?.usage;
   return (
     <div className="msg assistant">
-      {m.content ? <Markdown text={m.content} /> : streaming ? <div className="muted typing">Thinking…</div> : null}
+      {m.content ? (
+        <Markdown
+          text={m.content}
+          onApply={streaming ? undefined : (code) => void request('changes/applyBlock', { messageId: m.id, code }).catch(() => undefined)}
+        />
+      ) : streaming ? <div className="muted typing">Thinking…</div> : null}
       {m.meta?.error && <div className="banner error pre">{m.meta.error}</div>}
       {m.meta?.cancelled && <div className="muted small">Stopped.</div>}
       {m.meta?.route?.map((n, i) => (
@@ -260,6 +272,7 @@ function MessageView({ message: m, streaming }: { message: ChatMessage; streamin
           )}
         </div>
       )}
+      {!!m.changes?.length && <ChangesCard messageId={m.id} items={m.changes} onAsk={onAsk} />}
     </div>
   );
 }

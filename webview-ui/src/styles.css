@@ -141,14 +141,20 @@ input[type='checkbox'] { padding: 0; }
 .markdown th, .markdown td { border: 1px solid var(--border); padding: 2px 6px; }
 .markdown blockquote { margin: 0.5em 0; padding-left: 8px; border-left: 3px solid var(--border); color: var(--vscode-descriptionForeground); }
 
-.code-block { border: 1px solid var(--border); border-radius: var(--radius); margin: 0.5em 0; overflow: hidden; }
-.code-head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 2px 8px; font-size: 0.85em;
-  background: var(--vscode-editorGroupHeader-tabsBackground);
-  color: var(--vscode-descriptionForeground);
+.code-block {
+  position: relative; margin: 0.6em 0; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--vscode-chat-requestBorder, var(--border));
+  background: var(--vscode-textCodeBlock-background);
 }
-.code-block pre { margin: 0; padding: 8px; overflow-x: auto; background: var(--vscode-textCodeBlock-background); }
+.code-toolbar {
+  position: absolute; top: 4px; right: 4px; display: flex; align-items: center; gap: 4px;
+  opacity: 0; transition: opacity 0.1s;
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  border: 1px solid var(--border); border-radius: 4px; padding: 0 2px 0 6px;
+}
+.code-block:hover .code-toolbar, .code-toolbar:focus-within { opacity: 1; }
+.code-lang { font-size: 0.8em; color: var(--vscode-descriptionForeground); }
+.code-block pre { margin: 0; padding: 10px 12px; overflow-x: auto; }
 
 .composer { border-top: 1px solid var(--border); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 .composer textarea { resize: vertical; width: 100%; min-height: 48px; }
@@ -238,3 +244,86 @@ input[type='checkbox'] { padding: 0; }
 .meter-warn .meter-fill { background: var(--vscode-charts-yellow); }
 .meter-danger { background: color-mix(in srgb, var(--vscode-charts-red) 22%, transparent); }
 .meter-danger .meter-fill { background: var(--vscode-charts-red); }
+
+/* ---------- Phase 3: change review (Copilot edits-style card) ---------- */
+.btn.small { padding: 1px 8px; font-size: 0.9em; display: inline-flex; align-items: center; gap: 4px; }
+.btn.small .codicon { font-size: 13px; }
+
+.proposal-block {
+  margin: 0.5em 0; border: 1px solid var(--vscode-chat-requestBorder, var(--border)); border-radius: 6px;
+  background: var(--vscode-textCodeBlock-background);
+}
+.proposal-block > summary {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px; cursor: pointer; list-style: none;
+  font-size: 0.9em;
+}
+.proposal-block > summary::-webkit-details-marker { display: none; }
+.proposal-block > summary .codicon { font-size: 14px; }
+.proposal-label { font-family: var(--vscode-editor-font-family); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proposal-hint { margin-left: auto; color: var(--vscode-descriptionForeground); font-size: 0.9em; white-space: nowrap; }
+.proposal-block pre { margin: 0; padding: 8px 12px; overflow-x: auto; border-top: 1px solid var(--border); }
+
+.changes-card {
+  margin-top: 10px; border: 1px solid var(--vscode-chat-requestBorder, var(--border)); border-radius: 6px; overflow: hidden;
+  background: var(--vscode-editorWidget-background, transparent);
+}
+.changes-head {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 8px;
+  border-bottom: 1px solid var(--vscode-chat-requestBorder, var(--border));
+}
+.changes-title { font-weight: 600; }
+.stat { font-size: 0.85em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat .add { color: var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
+.stat .del { color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39); }
+
+.change-row { padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.change-row:last-of-type { border-bottom: none; }
+.change-row:hover { background: var(--vscode-list-hoverBackground); }
+.change-main { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.change-main > .codicon { flex: none; font-size: 14px; }
+.change-path {
+  display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; padding: 0; border: none; background: none;
+  cursor: pointer; text-align: left;
+}
+.change-path:disabled { cursor: default; }
+.change-path:not(:disabled):hover .change-name { text-decoration: underline; }
+.change-name { white-space: nowrap; }
+.change-dir { color: var(--vscode-descriptionForeground); font-size: 0.85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.change-command {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: var(--vscode-textCodeBlock-background); padding: 1px 6px; border-radius: 3px;
+}
+.tag { font-size: 0.75em; padding: 0 5px; border-radius: 8px; border: 1px solid var(--border); color: var(--vscode-descriptionForeground); }
+.status-rejected .change-name, .status-undone .change-name { text-decoration: line-through; opacity: 0.7; }
+
+.change-status { display: inline-flex; align-items: center; gap: 3px; font-size: 0.85em; white-space: nowrap; }
+.change-status .codicon { font-size: 13px; }
+.change-status.ok { color: var(--vscode-testing-iconPassed, #73c991); }
+.change-status.bad { color: var(--vscode-errorForeground); }
+.change-status.muted, .change-status.running { color: var(--vscode-descriptionForeground); }
+.change-actions { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+.icon-btn.accept:hover:not(:disabled) { color: var(--vscode-testing-iconPassed, #73c991); }
+.icon-btn.reject:hover:not(:disabled) { color: var(--vscode-errorForeground); }
+
+.change-msg { display: flex; gap: 6px; font-size: 0.85em; color: var(--vscode-descriptionForeground); margin: 2px 0 2px 20px; }
+.change-msg.bad { color: var(--vscode-errorForeground); }
+.change-msg .codicon { font-size: 13px; margin-top: 2px; flex: none; }
+
+.change-output { margin: 4px 0 2px 20px; font-size: 0.9em; }
+.change-output summary { cursor: pointer; color: var(--vscode-descriptionForeground); display: flex; gap: 10px; align-items: center; }
+.change-output pre {
+  margin: 4px 0 0; padding: 6px 8px; max-height: 220px; overflow: auto; white-space: pre-wrap;
+  background: var(--vscode-terminal-background, var(--vscode-textCodeBlock-background)); border-radius: 4px;
+}
+.changes-foot { display: flex; gap: 6px; align-items: center; padding: 4px 8px; border-top: 1px solid var(--border); }
+.changes-foot .codicon { font-size: 13px; }
+
+/* Narrow sidebars: the name shrinks (ellipsis); tags, stats, status and buttons keep their size. */
+.change-path { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.change-name { overflow: hidden; text-overflow: ellipsis; min-width: 2.5em; }
+.change-dir { flex: 0 1 auto; min-width: 0; }
+.change-command { flex: 1 1 auto; }
+.tag, .stat, .change-status, .change-actions { flex: none; white-space: nowrap; }
+.change-main > .spacer { display: none; }
+.change-name { flex: 0 1 auto; }
+.change-dir { flex-shrink: 50; }

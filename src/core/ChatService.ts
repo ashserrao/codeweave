@@ -11,6 +11,10 @@ import { CONTINUE_PROMPT, packContext, selectFoldCount, unsummarized, type PackO
 import { estimateTokens } from './tokens';
 import { newId } from './ids';
 import type { Logger } from './Logger';
+import type { ApprovalService } from '../approval/ApprovalService';
+import { CHANGE_FORMAT_INSTRUCTIONS } from '../approval/changeFormat';
+
+export type ChangeAction = 'accept' | 'reject' | 'undo' | 'stop' | 'diff' | 'open';
 
 const TARGET_KEY = 'codeweave.chat.target';
 const CURRENT_KEY = 'codeweave.chat.current';
@@ -24,9 +28,10 @@ function systemPrompt(extra: string): string {
   const base = [
     'You are CodeWeave, an expert software engineering assistant running inside VS Code.',
     `Workspace: ${folders}. Platform: ${process.platform}.`,
-    'Give precise, correct answers. When you show code changes, use fenced code blocks with a language tag and state the target file path above each block.',
-    'You cannot modify files or run commands yourself in this mode; the user applies changes. Never claim you have changed a file.',
-    'If information is missing (for example a file you have not seen), say so instead of guessing.',
+    'Give precise, correct answers.',
+    'If information is missing (for example a file you have not seen), say so instead of guessing; only use SEARCH text copied from file content you were actually shown.',
+    '',
+    CHANGE_FORMAT_INSTRUCTIONS,
   ].join('\n');
   return extra.trim() ? `${base}\n\nAdditional instructions from the user:\n${extra.trim()}` : base;
 }
@@ -50,6 +55,7 @@ export class ChatService implements vscode.Disposable {
     private readonly registry: ProviderRegistry,
     private readonly router: Router,
     private readonly context: ContextService,
+    private readonly approvals: ApprovalService,
     private readonly editor: EditorContext,
     private readonly workspaceState: vscode.Memento,
     private readonly log: Logger,
@@ -122,6 +128,9 @@ export class ChatService implements vscode.Disposable {
   }
 
   async delete(id: string): Promise<void> {
+    const conv = id === this.conversation.id ? this.conversation : await this.store.load(id);
+    const proposalIds = conv?.messages.flatMap((m) => m.changes?.map((c) => c.id) ?? []) ?? [];
+    if (proposalIds.length) await this.approvals.forget(proposalIds);
     await this.store.delete(id);
     if (this.conversation.id === id) await this.newConversation();
     else this.stateEmitter.fire();
@@ -297,6 +306,12 @@ export class ChatService implements vscode.Disposable {
           throw err;
         }
       }
+
+      // Turn path=/run blocks into reviewable changes. Nothing is applied here.
+      if (this.approvals.hasProposals(assistant.content)) {
+        this.setStatus('Preparing proposed changes…');
+        assistant.changes = await this.approvals.propose(assistant.content);
+      }
     } catch (err) {
       const cancelled = err instanceof ProviderError && err.kind === 'cancelled';
       assistant.meta = { ...assistant.meta, cancelled, error: cancelled ? undefined : describeError(err) };
@@ -317,6 +332,60 @@ export class ChatService implements vscode.Disposable {
       }
       this.stateEmitter.fire();
     }
+  }
+
+  /**
+   * Handles a click on a change card. Accept/undo/stop are the only paths that lead to the Applier,
+   * and they run only for the item ids the user acted on.
+   */
+  async changeAction(messageId: string, itemIds: string[], action: ChangeAction): Promise<void> {
+    const msg = this.conversation.messages.find((m) => m.id === messageId);
+    const items = msg?.changes?.filter((c) => itemIds.includes(c.id)) ?? [];
+    if (!msg || !items.length) throw new Error('That change is no longer in this conversation');
+    const publish = () => this.messageEmitter.fire({ ...msg, changes: msg.changes?.map((c) => ({ ...c })) });
+
+    for (const item of items) {
+      switch (action) {
+        case 'diff':
+          await this.approvals.showDiff(item);
+          return;
+        case 'open':
+          await this.approvals.openFile(item);
+          return;
+        case 'accept':
+          await this.approvals.accept(item, publish);
+          break;
+        case 'reject':
+          this.approvals.reject(item);
+          break;
+        case 'undo':
+          await this.approvals.undo(item);
+          break;
+        case 'stop':
+          this.approvals.stop(item);
+          break;
+      }
+      publish();
+    }
+    await this.store.save(this.conversation);
+  }
+
+  /** "Apply to editor" on a plain code block: becomes a pending change on the active file. */
+  async applyCodeBlock(messageId: string, code: string): Promise<void> {
+    const msg = this.conversation.messages.find((m) => m.id === messageId);
+    if (!msg) throw new Error('Message not found');
+    const editor = this.editor.current();
+    if (!editor || editor.document.uri.scheme !== 'file') throw new Error('Open the file you want to change, then click Apply again');
+    const sel = editor.selection;
+    const item = await this.approvals.proposeForEditor(code, {
+      uri: editor.document.uri,
+      selectedText: sel.isEmpty ? undefined : editor.document.getText(sel),
+      cursorLine: sel.active.line,
+    });
+    msg.changes = [...(msg.changes ?? []), item];
+    this.messageEmitter.fire({ ...msg });
+    await this.store.save(this.conversation);
+    if (item.status === 'pending') await this.approvals.showDiff(item);
   }
 
   dispose(): void {

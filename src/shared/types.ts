@@ -94,6 +94,8 @@ export interface ChatMessage {
     error?: string;
     cancelled?: boolean;
   };
+  /** File edits and commands proposed in this reply; nothing is applied until the user accepts. */
+  changes?: ChangeItem[];
 }
 
 export interface ConversationSummary {
@@ -215,4 +217,27 @@ export interface UsageState {
     rateLimit: { keysReporting: number; remainingTokens: number; remainingRequests: number };
     balances: { currency: string; remaining: number; keys: number; unlimitedKeys: number }[];
   };
+}
+
+export type ChangeKind = 'edit' | 'create' | 'delete' | 'command';
+export type ChangeStatus = 'pending' | 'running' | 'applied' | 'rejected' | 'failed' | 'undone';
+
+/** One reviewable change. Proposed file contents live in the extension's proposal store, not here. */
+export interface ChangeItem {
+  id: string;
+  kind: ChangeKind;
+  /** Workspace-relative path for file changes. */
+  path?: string;
+  /** Exact command text for kind 'command'. */
+  command?: string;
+  cwd?: string;
+  status: ChangeStatus;
+  added?: number;
+  removed?: number;
+  /** Why the change cannot be applied as proposed (e.g. search text not found), or why applying failed. */
+  error?: string;
+  /** Extra information, e.g. that the file changed since the proposal and the diff was refreshed. */
+  note?: string;
+  output?: { exitCode?: number; text: string; truncated: boolean; captured: boolean };
+  decidedAt?: number;
 }

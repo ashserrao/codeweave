@@ -57,6 +57,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         'chat/setTarget': (t) => this.chat.setTarget(t),
         'chat/openAdmin': () => void vscode.commands.executeCommand('codeweave.openAdmin'),
         'chat/openUsage': () => void vscode.commands.executeCommand('codeweave.openUsage'),
+        'changes/act': (p) => this.notifyOnError(this.chat.changeAction(p.messageId, p.itemIds, p.action)),
+        'changes/applyBlock': (p) => this.notifyOnError(this.chat.applyCodeBlock(p.messageId, p.code)),
         'chat/copy': async (p) => {
           await vscode.env.clipboard.writeText(p.text);
           vscode.window.setStatusBarMessage('CodeWeave: copied to clipboard', 2000);
@@ -74,6 +76,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   private async pushState(): Promise<void> {
     if (!this.rpc) return;
     this.rpc.emit('chat/state', await this.chat.getState());
+  }
+
+  private async notifyOnError(work: Promise<void>): Promise<void> {
+    try {
+      await work;
+    } catch (err) {
+      void vscode.window.showWarningMessage(`CodeWeave: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /** Reveal the chat and put text into the input box (used by "Ask About Selection"). */
