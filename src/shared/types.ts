@@ -98,6 +98,14 @@ export interface ChatMessage {
   changes?: ChangeItem[];
 }
 
+/** What "Include active editor" would attach right now; shown as the context chip in the chat input. */
+export interface EditorInfo {
+  path: string;
+  fileName: string;
+  /** 1-based line range when there is a non-empty selection. */
+  selection?: { startLine: number; endLine: number };
+}
+
 export interface ConversationSummary {
   id: string;
   title: string;

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { Attachment } from '../shared/types';
+import type { Attachment, EditorInfo } from '../shared/types';
 
 /**
  * Tracks the last focused text editor. When the chat webview has focus,
@@ -7,9 +7,34 @@ import type { Attachment } from '../shared/types';
  */
 export class EditorContext implements vscode.Disposable {
   private last: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
-  private readonly sub = vscode.window.onDidChangeActiveTextEditor((e) => {
-    if (e && e.document.uri.scheme !== 'output') this.last = e;
-  });
+  private readonly changed = new vscode.EventEmitter<void>();
+  /** Fires (debounced) when the active file or its selection changes. */
+  readonly onDidChange = this.changed.event;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private readonly subs = [
+    vscode.window.onDidChangeActiveTextEditor((e) => {
+      if (e && e.document.uri.scheme !== 'output') this.last = e;
+      this.schedule();
+    }),
+    vscode.window.onDidChangeTextEditorSelection(() => this.schedule()),
+  ];
+
+  private schedule(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.changed.fire(), 150);
+  }
+
+  describe(): EditorInfo | undefined {
+    const editor = this.current();
+    if (!editor || editor.document.uri.scheme === 'output') return undefined;
+    const path = vscode.workspace.asRelativePath(editor.document.uri, false);
+    const sel = editor.selection;
+    return {
+      path,
+      fileName: path.split(/[\\/]/).pop() ?? path,
+      selection: sel.isEmpty ? undefined : { startLine: sel.start.line + 1, endLine: sel.end.line + 1 },
+    };
+  }
 
   current(): vscode.TextEditor | undefined {
     const active = vscode.window.activeTextEditor;
@@ -65,6 +90,8 @@ export class EditorContext implements vscode.Disposable {
   }
 
   dispose(): void {
-    this.sub.dispose();
+    if (this.timer) clearTimeout(this.timer);
+    this.subs.forEach((s) => s.dispose());
+    this.changed.dispose();
   }
 }

@@ -57,6 +57,12 @@
         "icon": "$(add)"
       },
       {
+        "command": "codeweave.showHistory",
+        "title": "Show Chat History",
+        "category": "CodeWeave",
+        "icon": "$(history)"
+      },
+      {
         "command": "codeweave.openAdmin",
         "title": "Open Settings & Providers",
         "category": "CodeWeave",
@@ -77,6 +83,35 @@
         "command": "codeweave.askAboutSelection",
         "title": "Ask CodeWeave About Selection",
         "category": "CodeWeave"
+      },
+      {
+        "command": "codeweave.explainSelection",
+        "title": "Explain",
+        "category": "CodeWeave",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "codeweave.fixSelection",
+        "title": "Fix Problems",
+        "category": "CodeWeave",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "codeweave.generateTests",
+        "title": "Generate Tests",
+        "category": "CodeWeave",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "codeweave.refactorSelection",
+        "title": "Refactor",
+        "category": "CodeWeave",
+        "icon": "$(wand)"
+      },
+      {
+        "command": "codeweave.fixDiagnostics",
+        "title": "Fix with CodeWeave",
+        "category": "CodeWeave"
       }
     ],
     "menus": {
@@ -87,7 +122,7 @@
           "group": "navigation@1"
         },
         {
-          "command": "codeweave.openAdmin",
+          "command": "codeweave.showHistory",
           "when": "view == codeweave.chat",
           "group": "navigation@2"
         },
@@ -95,13 +130,47 @@
           "command": "codeweave.openUsage",
           "when": "view == codeweave.chat",
           "group": "navigation@3"
+        },
+        {
+          "command": "codeweave.openAdmin",
+          "when": "view == codeweave.chat",
+          "group": "navigation@4"
         }
       ],
       "editor/context": [
         {
+          "submenu": "codeweave.editor",
+          "group": "1_codeweave@1",
+          "when": "editorTextFocus"
+        }
+      ],
+      "codeweave.editor": [
+        {
+          "command": "codeweave.explainSelection",
+          "group": "1_ask@1"
+        },
+        {
+          "command": "codeweave.fixSelection",
+          "group": "1_ask@2"
+        },
+        {
+          "command": "codeweave.refactorSelection",
+          "group": "1_ask@3"
+        },
+        {
+          "command": "codeweave.generateTests",
+          "group": "1_ask@4"
+        },
+        {
           "command": "codeweave.askAboutSelection",
-          "when": "editorHasSelection",
-          "group": "codeweave@1"
+          "group": "2_chat@1",
+          "when": "editorHasSelection"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codeweave.fixDiagnostics",
+          "when": "false"
         }
       ]
     },
@@ -145,7 +214,14 @@
           "description": "When a conversation no longer fits the model, condense older turns with the local context model instead of dropping them. Conversation text is only sent to providers with the \"context\" role for this."
         }
       }
-    }
+    },
+    "submenus": [
+      {
+        "id": "codeweave.editor",
+        "label": "CodeWeave",
+        "icon": "media/codeweave.svg"
+      }
+    ]
   },
   "scripts": {
     "build": "npm run build:webview && npm run build:ext",

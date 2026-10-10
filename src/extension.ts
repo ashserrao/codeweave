@@ -17,6 +17,7 @@ import { UsagePanel } from './webview/UsagePanel';
 import { Applier } from './approval/Applier';
 import { ApprovalService, PROPOSAL_SCHEME } from './approval/ApprovalService';
 import { ProposalStore } from './approval/ProposalStore';
+import { registerEditorActions } from './core/editorActions';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = new Logger();
@@ -36,7 +37,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const chat = new ChatService(store, registry, router, contextService, approvals, editor, context.workspaceState, log);
   await chat.restore();
 
-  const chatView = new ChatViewProvider(context.extensionUri, chat, log);
+  const chatView = new ChatViewProvider(context.extensionUri, chat, editor, log);
 
   context.subscriptions.push(
     log,
@@ -57,12 +58,50 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ),
     vscode.commands.registerCommand('codeweave.openUsage', () => UsagePanel.show(context.extensionUri, usage, log)),
     vscode.commands.registerCommand('codeweave.cancelRequest', () => chat.cancel()),
+    vscode.commands.registerCommand('codeweave.showHistory', () => showHistory(chat)),
+    ...registerEditorActions(chat),
     vscode.commands.registerCommand('codeweave.askAboutSelection', () =>
       chatView.prefill('Explain the selected code and point out any bugs or improvements.'),
     ),
   );
 
   log.info('CodeWeave activated');
+}
+
+/** Chat history as a Quick Pick (like Copilot Chat): pick to open, trash button to delete. */
+async function showHistory(chat: ChatService): Promise<void> {
+  type Item = vscode.QuickPickItem & { id: string };
+  const deleteButton: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('trash'), tooltip: 'Delete conversation' };
+  const pick = vscode.window.createQuickPick<Item>();
+  pick.placeholder = 'Search chat history';
+  pick.matchOnDescription = true;
+  const load = async () => {
+    const items = await chat.history();
+    pick.items = items.map((h) => ({
+      id: h.id,
+      label: h.title,
+      description: `${h.messageCount} messages`,
+      detail: new Date(h.updatedAt).toLocaleString(),
+      iconPath: new vscode.ThemeIcon(h.id === chat.currentId ? 'comment-discussion' : 'comment'),
+      buttons: [deleteButton],
+    }));
+    if (!items.length) pick.placeholder = 'No saved conversations yet';
+  };
+  pick.onDidAccept(async () => {
+    const item = pick.selectedItems[0];
+    pick.hide();
+    if (item) {
+      await chat.open(item.id);
+      await vscode.commands.executeCommand(`${ChatViewProvider.viewId}.focus`);
+    }
+  });
+  pick.onDidTriggerItemButton(async (e) => {
+    await chat.delete(e.item.id);
+    await load();
+  });
+  pick.onDidHide(() => pick.dispose());
+  await load();
+  pick.show();
 }
 
 export function deactivate(): void {

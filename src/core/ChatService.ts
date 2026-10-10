@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { ChatState } from '../shared/protocol';
-import type { ChatMessage, Conversation, ModelTarget } from '../shared/types';
+import type { ChatMessage, Conversation, ConversationSummary, ModelTarget } from '../shared/types';
 import type { ConversationStore } from './ConversationStore';
 import type { EditorContext } from './EditorContext';
 import type { ContextService } from './ContextService';
@@ -108,7 +108,16 @@ export class ChatService implements vscode.Disposable {
       ),
       hasIntelligenceProvider: intelligence.some((p) => p.enabled && p.models.some((m) => m.enabled)),
       hasContextModel: this.context.isAvailable(),
+      editor: this.editor.describe(),
     };
+  }
+
+  history(): Promise<ConversationSummary[]> {
+    return this.store.list();
+  }
+
+  get currentId(): string {
+    return this.conversation.id;
   }
 
   async newConversation(): Promise<void> {

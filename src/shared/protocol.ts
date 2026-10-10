@@ -8,6 +8,7 @@ import type {
   UsageState,
   Conversation,
   ConversationSummary,
+  EditorInfo,
   ModelTarget,
   ProviderConfig,
   ProviderPreset,
@@ -24,6 +25,7 @@ export interface ChatState {
   targets: { providerId: string; providerName: string; modelId: string; model: string }[];
   hasIntelligenceProvider: boolean;
   hasContextModel: boolean;
+  editor?: EditorInfo;
 }
 
 export interface AdminState {
@@ -42,6 +44,8 @@ export interface Methods {
   'chat/openAdmin': { params: void; result: void };
   'chat/copy': { params: { text: string }; result: void };
   'chat/openUsage': { params: void; result: void };
+  /** Opens a searchable Quick Pick of models (Auto + every enabled intelligence model). */
+  'chat/pickModel': { params: void; result: void };
   /** A click on a change card. Only accept/undo/stop can lead to a write or command, and only for these ids. */
   'changes/act': {
     params: { messageId: string; itemIds: string[]; action: 'accept' | 'reject' | 'undo' | 'stop' | 'diff' | 'open' };
@@ -77,6 +81,7 @@ export interface Events {
   'chat/message': ChatMessage;
   'admin/state': AdminState;
   'chat/status': { text?: string };
+  'chat/editor': { editor?: EditorInfo };
   'usage/state': UsageState;
   'prefill': { text: string };
 }
