@@ -47,13 +47,13 @@ function withIdleTimeout(signal: AbortSignal, idleMs: number) {
   };
 }
 
-function toProviderError(err: unknown, userSignal: AbortSignal, timedOut: boolean): ProviderError {
+function toProviderError(err: unknown, userSignal: AbortSignal, timedOut: boolean, midStream = false): ProviderError {
   if (err instanceof ProviderError) return err;
   if (userSignal.aborted) return new ProviderError('cancelled', 'Request cancelled');
   if (timedOut) return new ProviderError('timeout', 'No response from provider within the idle timeout');
   const cause = (err as { cause?: { code?: string; message?: string } })?.cause;
   const detail = cause?.code ?? cause?.message ?? (err instanceof Error ? err.message : String(err));
-  return new ProviderError('network', `Could not reach provider: ${detail}`);
+  return new ProviderError('network', midStream ? `Connection lost mid-response: ${detail}` : `Could not reach provider: ${detail}`);
 }
 
 export class OpenAICompatAdapter implements ProviderAdapter {
@@ -157,7 +157,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
         for (const data of parser.end()) handle(data);
       }
     } catch (err) {
-      const providerError = toProviderError(err, req.signal, idle.timedOut());
+      const providerError = toProviderError(err, req.signal, idle.timedOut(), text.length > 0);
       providerError.rateLimits ??= rateLimits;
       throw providerError;
     } finally {

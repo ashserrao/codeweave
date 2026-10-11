@@ -2,7 +2,7 @@
   "name": "codeweave",
   "displayName": "CodeWeave",
   "description": "Your code. Connected intelligence. An MCP-powered AI coding agent with multi-provider key rotation, persistent code memory, and human-approved changes.",
-  "version": "0.1.1",
+  "version": "0.3.0",
   "publisher": "codeweave",
   "icon": "media/icon.png",
   "galleryBanner": {
